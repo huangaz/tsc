@@ -20,6 +20,7 @@ func (b BitStream) String() string {
 
 func (b *BitStream) AddValueToBitStream(value uint64, bitsInValue uint64) {
 	var bitsAvailable uint64
+	// calculate the numbers of bits available in the last byte
 	if b.NumBits&0x7 == 0 {
 		bitsAvailable = 0
 	} else {
@@ -29,26 +30,26 @@ func (b *BitStream) AddValueToBitStream(value uint64, bitsInValue uint64) {
 	lastByte := len(b.Stream) - 1
 
 	if bitsInValue <= bitsAvailable {
-		// Everything fits inside the last byte
+		// value can be stored in the last byte
 		b.Stream[lastByte] += byte(value << (bitsAvailable - bitsInValue))
 		return
 	}
 
 	bitLeft := bitsInValue
 	if bitsAvailable > 0 {
-		// Fill up the last byte
+		// fill up the last byte
 		b.Stream[lastByte] += byte(value >> (bitsInValue - bitsAvailable))
 		bitLeft -= bitsAvailable
 	}
 
 	for bitLeft >= 8 {
-		// Enough bits for a dedicated byte
+		// store every 8 bits as a byte
 		b.Stream = append(b.Stream, byte(value>>(bitLeft-8)&0xFF))
 		bitLeft -= 8
 	}
 
 	if bitLeft != 0 {
-		// Start a new byte with the rest of the bits
+		// store the rest of the bits in a new byte
 		b.Stream = append(b.Stream, byte(value&((1<<bitLeft)-1)<<(8-bitLeft)))
 	}
 }
@@ -68,14 +69,14 @@ func (b *BitStream) ReadValueFromBitStream(bitsToRead uint64) (uint64, error) {
 	return res, nil
 }
 
-func (b *BitStream) FindTheFirstZerobit(limit uint64) (uint64, error) {
-	for bits := uint64(0); bits < limit; bits++ {
+func (b *BitStream) FindTheFirstZeroBit(limit uint64) (uint64, error) {
+	for index := uint64(0); index < limit; index++ {
 		bit, err := b.ReadValueFromBitStream(1)
 		if err != nil {
 			return 0, err
 		}
 		if bit == 0 {
-			return bits, nil
+			return index, nil
 		}
 	}
 	return limit, nil
@@ -131,17 +132,14 @@ func Clz(x uint64) uint64 {
 		n = n + 16
 		x = x << 16
 	}
-
 	if (x >> (32 + 16 + 8)) == 0 {
 		n = n + 8
 		x = x << 8
 	}
-
 	if (x >> (32 + 16 + 8 + 4)) == 0 {
 		n = n + 4
 		x = x << 4
 	}
-
 	if (x >> (32 + 16 + 8 + 4 + 2)) == 0 {
 		n = n + 2
 		x = x << 2
